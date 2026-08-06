@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configure PostgreSQL Database Context using explicit namespace mapping
+// 1. Configure PostgreSQL Database Context
 builder.Services.AddDbContext<AssignmentSubSystem.API.Data.AssignmentSubDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. Configure JWT Authentication & Authorization (Updated to standardized colon path)
+// 2. Configure JWT Authentication & Authorization
 var jwtSecret = builder.Configuration["Jwt:Secret"] 
     ?? throw new InvalidOperationException("JWT Secret is not configured.");
 
@@ -27,38 +27,64 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-
 builder.Services.AddAuthorization();
 builder.Services.AddControllers(); 
 
-// 3. Modern .NET 10 Way to Configure OpenAPI/Swagger metadata safely
+// 3. Configure OpenAPI/Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(); // Clean call prevents core type conflicts
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 4. Automatically Apply Database Migrations on Startup
+// 4. Automatically Apply Database Migrations safely with Retry logic
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AssignmentSubSystem.API.Data.AssignmentSubDbContext>();
-    if (dbContext.Database.GetPendingMigrations().Any())
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var retryCount = 0;
+    const int maxRetries = 5;
+
+    while (retryCount < maxRetries)
     {
-        dbContext.Database.Migrate();
+        try
+        {
+            var dbContext = services.GetRequiredService<AssignmentSubSystem.API.Data.AssignmentSubDbContext>();
+            
+            logger.LogInformation("Attempting to apply database migrations...");
+            
+            dbContext.Database.Migrate(); 
+            
+            logger.LogInformation("Database migration applied successfully.");
+            break; 
+        }
+        catch (Exception ex)
+        {
+            retryCount++;
+            logger.LogWarning(ex, $"Database migration failed. Retrying in 5 seconds... (Attempt {retryCount}/{maxRetries})");
+            System.Threading.Thread.Sleep(5000); 
+            
+            if (retryCount == maxRetries)
+            {
+                logger.LogError(ex, "Could not apply database migrations after maximum attempts.");
+            }
+        }
     }
 }
 
-// 5. Configure the HTTP Request Pipeline
+// 5. Configure Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => 
     {
-        // Points to the automatically generated schema document endpoint safely
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "AssignmentSystem.API v1");
     });
 }
-
-app.UseHttpsRedirection();
+else
+{
+    // Production / External HTTPS handling (Optional)
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
