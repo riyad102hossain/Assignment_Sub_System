@@ -42,7 +42,7 @@ namespace AssignmentSubSystem.API.Controllers
 
             // 3. Generate JWT Token properties
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_config["Jwt__Secret"]!);
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Secret"]!);            
             var roleName = user.Role.ToString();
 
             var claims = new List<Claim>
@@ -53,13 +53,13 @@ namespace AssignmentSubSystem.API.Controllers
                 new Claim(ClaimTypes.Role, roleName)
             };
 
-            var expiryMinutes = double.Parse(_config["Jwt__ExpiryMinutes"] ?? "60");
+            var expiryMinutes = double.Parse(_config["Jwt:ExpiryMinutes"] ?? "60");            
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddMinutes(expiryMinutes),
-                Issuer = _config["Jwt__Issuer"],
-                Audience = _config["Jwt__Audience"],
+                Issuer = _config["Jwt:Issuer"],
+                Audience = _config["Jwt:Audience"],
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
