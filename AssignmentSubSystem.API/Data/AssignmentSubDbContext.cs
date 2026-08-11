@@ -77,52 +77,5 @@ public class AssignmentSubDbContext : DbContext
             .HasForeignKey(s => s.StudentId)
             .OnDelete(DeleteBehavior.Restrict); // Cascade থেকে Restrict করা হয়েছে Multiple Cascade Path আটকানোর জন্য
 
-
-// --- DATA SEEDING ---
-
-// modelBuilder.Entity<User>().HasData(
-//     new User 
-//     { 
-//         Id = 1, 
-//         Name = "System Admin", 
-//         Email = "admin@school.com", 
-//         // Hash for "Admin123"
-//         PasswordHash = "$2a$11$qR3G4vX9T1yO8zK5uJ2bXe7M8N9P0Q1R2S3T4U5V6W7X8Y9Z0A1B2", 
-//         Role = UserRole.Admin,
-//         CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-//     },
-//     new User 
-//     { 
-//         Id = 2, 
-//         Name = "Mr. John (Teacher)", 
-//         Email = "teacher@school.com", 
-//         // Hash for "Teacher123"
-//         PasswordHash = "$2a$11$m2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S1T2U3V4W5X6Y7Z", 
-//         Role = UserRole.Teacher,
-//         CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-//     },
-//     new User 
-//     { 
-//         Id = 3, 
-//         Name = "Rahim (Student)", 
-//         Email = "student@school.com", 
-//         // Hash for "Student123"
-//         PasswordHash = "$2a$11$x1Y2Z3A4B5C6D7E8F9G0H1I2J3K4L5M6N7O8P9Q0R1S2T3U4V5W6X", 
-//         Role = UserRole.Student,
-//         CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-//     }
-// );
-
-modelBuilder.Entity<ClassRoom>().HasData(
-    new ClassRoom { Id = 1, Name = "Class 10", Section = "A" }
-);
-
-modelBuilder.Entity<Subject>().HasData(
-    new Subject { Id = 1, Name = "Mathematics", ClassRoomId = 1 }
-);
-
-modelBuilder.Entity<SubjectTeacher>().HasData(
-    new SubjectTeacher { Id = 1, TeacherId = 2, SubjectId = 1 }
-);
     }
 }

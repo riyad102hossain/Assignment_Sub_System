@@ -9,7 +9,7 @@ namespace AssignmentSubSystem.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin")] // Only Admins can manage classrooms
 public class ClassRoomsController : ControllerBase
 {
     private readonly AssignmentSubDbContext _context;

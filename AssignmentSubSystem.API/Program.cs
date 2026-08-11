@@ -2,9 +2,10 @@ using AssignmentSubSystem.API.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models; // Required for OpenApi models
-using Swashbuckle.AspNetCore.Filters; // Add for SecurityRequirementsOperationFilter
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters; 
 using System.Text;
+using AssignmentSubSystem.API.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 // 1. Configure PostgreSQL Database Context
@@ -33,30 +34,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ClockSkew = TimeSpan.Zero 
+            ClockSkew = TimeSpan.Zero ,
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role,
+            NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier
         };
     });
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 
-// 3. Configure Swagger with Full Inline Namespaces (No ambiguous using directives)
+// 3. Configure Swagger/OpenAPI with JWT Authentication Support
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+builder.Services.AddSwaggerGen(c =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "AssignmentSystem API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AssignmentSubSystem API", Version = "v1" });
 
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    // Define standard HTTP Bearer authentication scheme
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
-        Scheme = "Bearer",
+        Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter your JWT token in the format: Bearer {token}"
+        Description = "Input your JWT token in this format: Bearer {your token here}"
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    // Apply security globally so EVERY protected endpoint requires this scheme
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
@@ -70,9 +75,6 @@ builder.Services.AddSwaggerGen(options =>
             Array.Empty<string>()
         }
     });
-    
-    // Enable operation filter to apply security to individual endpoints
-    options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 
 var app = builder.Build();
@@ -127,6 +129,7 @@ else
     app.UseHttpsRedirection();
 }
 
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 

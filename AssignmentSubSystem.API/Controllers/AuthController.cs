@@ -40,6 +40,9 @@ namespace AssignmentSubSystem.API.Controllers
                 return Unauthorized(new { message = "Invalid email or password." });
             }
 
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+            JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
+
             // 3. Generate JWT Token properties
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(_config["Jwt:Secret"]!);            
