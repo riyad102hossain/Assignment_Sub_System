@@ -26,6 +26,11 @@ public record CreateSubjectDto(
     [Required] int ClassRoomId
 );
 
+public record UpdateSubjectDto(
+    [Required] string Name,
+    [Required] int ClassRoomId
+);
+
 public record SubjectResponseDto(
     int Id,
     string Name,
@@ -43,6 +48,14 @@ public record CreateUserDto(
     [Required] string Name,
     [Required][EmailAddress] string Email,
     [Required][MinLength(6)] string Password,
+    [Required] UserRole Role,
+    int? ClassRoomId
+);
+
+public record UpdateUserDto(
+    [Required] string Name,
+    [Required][EmailAddress] string Email,
+    string? Password, // Optional - only update if provided
     [Required] UserRole Role,
     int? ClassRoomId
 );

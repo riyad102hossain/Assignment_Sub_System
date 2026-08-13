@@ -3,7 +3,8 @@ namespace AssignmentSubSystem.API.Models;
 public class Submission
 {
     public int Id { get; set; }
-    public string AnswerContent { get; set; } = string.Empty; // Text or file link
+    public string AnswerContent { get; set; } = string.Empty;
+    public string? FilePath { get; set; }
     public SubmissionStatus Status { get; set; } = SubmissionStatus.Submitted;
     public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
     

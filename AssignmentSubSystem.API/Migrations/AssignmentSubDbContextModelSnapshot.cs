@@ -89,14 +89,6 @@ namespace AssignmentSubSystem.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ClassRooms");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "Class 10",
-                            Section = "A"
-                        });
                 });
 
             modelBuilder.Entity("AssignmentSubSystem.API.Models.Subject", b =>
@@ -119,14 +111,6 @@ namespace AssignmentSubSystem.API.Migrations
                     b.HasIndex("ClassRoomId");
 
                     b.ToTable("Subjects");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            ClassRoomId = 1,
-                            Name = "Mathematics"
-                        });
                 });
 
             modelBuilder.Entity("AssignmentSubSystem.API.Models.SubjectTeacher", b =>
@@ -150,14 +134,6 @@ namespace AssignmentSubSystem.API.Migrations
                     b.HasIndex("TeacherId");
 
                     b.ToTable("SubjectTeachers");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            SubjectId = 1,
-                            TeacherId = 2
-                        });
                 });
 
             modelBuilder.Entity("AssignmentSubSystem.API.Models.Submission", b =>
@@ -174,6 +150,9 @@ namespace AssignmentSubSystem.API.Migrations
 
                     b.Property<int>("AssignmentId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("FilePath")
+                        .HasColumnType("text");
 
                     b.Property<decimal?>("ObtainedMarks")
                         .HasColumnType("numeric");

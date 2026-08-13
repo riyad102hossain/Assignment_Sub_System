@@ -39,7 +39,7 @@ public static class DbInitializer
 
             var teacher = new User
             {
-                Name = "Mr. John",
+                Name = "Ashikur Rahman (teacher1)",
                 Email = "teacher@school.com",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("Teacher123"),
                 Role = UserRole.Teacher,

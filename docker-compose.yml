@@ -59,19 +59,6 @@ services:
       backend:
         condition: service_started
 
-    # 4. Portainer Web UI Dashboard
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: docker_ui
-    restart: always
-    command: -H unix:///var/run/docker.sock
-    ports:
-      - "9000:9000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data
-
 
 volumes:
   pgdata:
-  portainer_data:

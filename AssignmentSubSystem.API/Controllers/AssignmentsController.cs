@@ -20,13 +20,17 @@ public class AssignmentsController : ControllerBase
         _context = context;
     }
 
-    // Admin (View All), Teacher (View Own Created), Student (View Published for Class)
     [HttpGet]
     [Authorize(Roles = "Admin,Teacher,Student")]
     public async Task<IActionResult> GetAll()
     {
-        var userRole = User.FindFirstValue(ClaimTypes.Role);
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userRole = User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirst("role")?.Value;
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("id")?.Value;
+
+        if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+        {
+            return Unauthorized(new { message = "Invalid token or user ID missing." });
+        }
 
         var query = _context.Assignments
             .Include(a => a.Teacher)
@@ -34,22 +38,61 @@ public class AssignmentsController : ControllerBase
             .Include(a => a.Subject)
             .AsQueryable();
 
-        if (userRole == UserRole.Student.ToString())
+        // Check role strings flexibly (Case-insensitive check)
+        bool isStudent = string.Equals(userRole, "Student", StringComparison.OrdinalIgnoreCase) || userRole == UserRole.Student.ToString();
+        bool isTeacher = string.Equals(userRole, "Teacher", StringComparison.OrdinalIgnoreCase) || userRole == UserRole.Teacher.ToString();
+
+        if (isStudent)
         {
             var student = await _context.Users.FindAsync(userId);
-            if (student?.ClassRoomId == null)
+
+            if (student == null || student.ClassRoomId == null)
             {
-                return BadRequest(new { message = "Student is not assigned to any classroom." });
+                return Ok(new List<object>()); 
             }
+
             query = query.Where(a => a.ClassRoomId == student.ClassRoomId && a.Status == AssignmentStatus.Published);
         }
-        else if (userRole == UserRole.Teacher.ToString())
+        else if (isTeacher)
         {
             query = query.Where(a => a.TeacherId == userId);
         }
-        // Admin role without any filters sees all assignments
 
-        var result = await query.Select(a => new AssignmentResponseDto
+        var assignments = await query.ToListAsync();
+
+        if (isStudent)
+        {
+            var studentSubmissions = await _context.Submissions
+                .Where(s => s.StudentId == userId)
+                .ToListAsync();
+
+            var studentResult = assignments.Select(a => {
+                var sub = studentSubmissions.FirstOrDefault(s => s.AssignmentId == a.Id);
+                return new
+                {
+                    id = a.Id,
+                    title = a.Title,
+                    description = a.Description,
+                    deadline = a.Deadline,
+                    maxMarks = a.MaxMarks,
+                    status = a.Status.ToString(),
+                    teacherName = a.Teacher != null ? a.Teacher.Name : "",
+                    classRoomName = a.ClassRoom != null ? a.ClassRoom.Name : "",
+                    subjectName = a.Subject != null ? a.Subject.Name : "",
+                    
+                    // JSON lowerCamelCase camelCase naming for JS compatibility
+                    isSubmitted = sub != null,
+                    submissionId = sub?.Id,
+                    submittedContent = sub?.AnswerContent,
+                    marksObtained = sub?.ObtainedMarks,
+                    teacherFeedback = sub?.TeacherFeedback
+                };
+            });
+
+            return Ok(studentResult);
+        }
+
+        var result = assignments.Select(a => new AssignmentResponseDto
         {
             Id = a.Id,
             Title = a.Title,
@@ -64,12 +107,11 @@ public class AssignmentsController : ControllerBase
             ClassRoomName = a.ClassRoom != null ? a.ClassRoom.Name : "",
             SubjectId = a.SubjectId,
             SubjectName = a.Subject != null ? a.Subject.Name : ""
-        }).ToListAsync();
+        });
 
         return Ok(result);
     }
 
-    // Only Teacher can create assignments
     [HttpPost]
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> Create([FromBody] CreateAssignmentDto dto)
@@ -84,7 +126,7 @@ public class AssignmentsController : ControllerBase
             MaxMarks = dto.MaxMarks,
             ClassRoomId = dto.ClassRoomId,
             SubjectId = dto.SubjectId,
-            Status = dto.Status,
+            Status = dto.Status == 0 ? AssignmentStatus.Published : dto.Status,
             TeacherId = teacherId
         };
 
@@ -94,7 +136,6 @@ public class AssignmentsController : ControllerBase
         return Ok(new { message = "Assignment created successfully.", assignmentId = assignment.Id });
     }
 
-    // Only Teacher can change status (Publish / Draft)
     [HttpPatch("{id}/status")]
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> ChangeStatus(int id, [FromBody] AssignmentStatus status)
@@ -104,7 +145,6 @@ public class AssignmentsController : ControllerBase
         var assignment = await _context.Assignments.FindAsync(id);
         if (assignment == null) return NotFound(new { message = "Assignment not found." });
 
-        // Ensure teacher can only modify their own assignment
         if (assignment.TeacherId != teacherId)
         {
             return Forbid();
@@ -114,5 +154,59 @@ public class AssignmentsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { message = $"Assignment status updated to {status}." });
+    }
+
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateAssignmentDto dto)
+    {
+        var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var assignment = await _context.Assignments.FindAsync(id);
+        if (assignment == null) return NotFound(new { message = "Assignment not found." });
+
+        if (assignment.TeacherId != teacherId)
+        {
+            return Forbid();
+        }
+
+        assignment.Title = dto.Title;
+        assignment.Description = dto.Description;
+        assignment.Deadline = dto.Deadline;
+        assignment.MaxMarks = dto.MaxMarks;
+        assignment.ClassRoomId = dto.ClassRoomId;
+        assignment.SubjectId = dto.SubjectId;
+        assignment.Status = dto.Status == 0 ? AssignmentStatus.Published : dto.Status;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Assignment updated successfully." });
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var teacherId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var assignment = await _context.Assignments.FindAsync(id);
+        if (assignment == null) return NotFound(new { message = "Assignment not found." });
+
+        if (assignment.TeacherId != teacherId)
+        {
+            return Forbid();
+        }
+
+        // Check if there are any submissions for this assignment
+        var hasSubmissions = await _context.Submissions.AnyAsync(s => s.AssignmentId == id);
+        if (hasSubmissions)
+        {
+            return BadRequest(new { message = "Cannot delete assignment with existing submissions." });
+        }
+
+        _context.Assignments.Remove(assignment);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Assignment deleted successfully." });
     }
 }

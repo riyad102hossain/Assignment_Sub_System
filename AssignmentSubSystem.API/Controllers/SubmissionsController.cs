@@ -20,49 +20,56 @@ public class SubmissionsController : ControllerBase
         _context = context;
     }
 
-    // Only Student can submit / resubmit answers
-    [HttpPost]
-    [Authorize(Roles = "Student")]
-    public async Task<IActionResult> Submit([FromBody] CreateSubmissionDto dto)
+// submission
+[HttpPost]
+[Authorize(Roles = "Student")]
+public async Task<IActionResult> Submit([FromBody] CreateSubmissionDto dto)
+{
+    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("id")?.Value;
+    if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
+
+    var submission = new Submission
     {
-        var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        AssignmentId = dto.AssignmentId,
+        StudentId = int.Parse(userIdClaim),
+        AnswerContent = dto.AnswerContent,
+        SubmittedAt = DateTime.UtcNow
+    };
 
-        var assignment = await _context.Assignments.FindAsync(dto.AssignmentId);
-        if (assignment == null || assignment.Status != AssignmentStatus.Published)
-        {
-            return BadRequest(new { message = "Assignment is invalid or not published." });
-        }
+    _context.Submissions.Add(submission);
+    await _context.SaveChangesAsync();
 
-        if (DateTime.UtcNow > assignment.Deadline)
-        {
-            return BadRequest(new { message = "Deadline has passed for this assignment." });
-        }
+    return Ok(submission);
+}
 
-        var existingSubmission = await _context.Submissions
-            .FirstOrDefaultAsync(s => s.AssignmentId == dto.AssignmentId && s.StudentId == studentId);
 
-        if (existingSubmission != null)
-        {
-            existingSubmission.AnswerContent = dto.AnswerContent;
-            existingSubmission.SubmittedAt = DateTime.UtcNow;
-            existingSubmission.Status = SubmissionStatus.Resubmitted;
-        }
-        else
-        {
-            var submission = new Submission
-            {
-                AssignmentId = dto.AssignmentId,
-                StudentId = studentId,
-                AnswerContent = dto.AnswerContent,
-                Status = SubmissionStatus.Submitted,
-                SubmittedAt = DateTime.UtcNow
-            };
-            _context.Submissions.Add(submission);
-        }
+// Update submission before deadline
+[HttpPut("{id}")]
+[Authorize(Roles = "Student")]
+public async Task<IActionResult> UpdateSubmission(int id, [FromBody] CreateSubmissionDto dto)
+{
+    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("id")?.Value;
+    if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
 
-        await _context.SaveChangesAsync();
-        return Ok(new { message = "Assignment submitted successfully." });
+    var submission = await _context.Submissions
+        .Include(s => s.Assignment)
+        .FirstOrDefaultAsync(s => s.Id == id && s.StudentId == int.Parse(userIdClaim));
+
+    if (submission == null) 
+        return NotFound(new { message = "Submission not found." });
+
+    // Check deadline
+    if (submission.Assignment != null && submission.Assignment.Deadline < DateTime.UtcNow)
+    {
+        return BadRequest(new { message = "Cannot update submission. Deadline has passed." });
     }
+
+    submission.AnswerContent = dto.AnswerContent;
+    submission.SubmittedAt = DateTime.UtcNow;
+
+    await _context.SaveChangesAsync();
+    return Ok(new { message = "Submission updated successfully.", submission });
+}
 
     // Only Teacher can grade/review submissions
     [HttpPut("{id}/review")]
@@ -81,6 +88,12 @@ public class SubmissionsController : ControllerBase
         if (submission.Assignment?.TeacherId != teacherId)
         {
             return Forbid();
+        }
+
+        // Validate obtained marks do not exceed assignment max marks
+        if (submission.Assignment != null && dto.ObtainedMarks > submission.Assignment.MaxMarks)
+        {
+            return BadRequest(new { message = "Obtained marks cannot exceed assignment max marks." });
         }
 
         submission.ObtainedMarks = dto.ObtainedMarks;

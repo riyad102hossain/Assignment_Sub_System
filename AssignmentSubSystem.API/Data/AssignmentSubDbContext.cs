@@ -75,7 +75,7 @@ public class AssignmentSubDbContext : DbContext
             .HasOne(s => s.Student)
             .WithMany(u => u.Submissions)
             .HasForeignKey(s => s.StudentId)
-            .OnDelete(DeleteBehavior.Restrict); // Cascade থেকে Restrict করা হয়েছে Multiple Cascade Path আটকানোর জন্য
+            .OnDelete(DeleteBehavior.Restrict); // Changed cascade to Restrict to avoid multiple cascade paths
 
     }
 }

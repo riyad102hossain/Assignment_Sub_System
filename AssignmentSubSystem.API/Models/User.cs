@@ -9,7 +9,7 @@ public class User
     public UserRole Role { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Student-এর জন্য ClassRoom Foreign Key (Nullable, কারণ Admin/Teacher-দের ClassRoomId লাগবে না)
+    // ClassRoom FK for students (nullable; Admin/Teacher don't require ClassRoomId)
     public int? ClassRoomId { get; set; }
     public ClassRoom? ClassRoom { get; set; }
 

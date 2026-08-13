@@ -60,6 +60,46 @@ public class UsersController : ControllerBase
         return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, response);
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto dto)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null)
+            return NotFound(new { message = "User not found." });
+
+        // Check if email is being changed and if it already exists
+        if (user.Email != dto.Email)
+        {
+            var emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email && u.Id != id);
+            if (emailExists)
+                return BadRequest(new { message = "Email is already registered." });
+        }
+
+        // Validate ClassRoom if role is Student
+        if (dto.Role == UserRole.Student && dto.ClassRoomId.HasValue)
+        {
+            var classExists = await _context.ClassRooms.AnyAsync(c => c.Id == dto.ClassRoomId.Value);
+            if (!classExists)
+                return BadRequest(new { message = "Invalid ClassRoomId." });
+        }
+
+        user.Name = dto.Name;
+        user.Email = dto.Email;
+        user.Role = dto.Role;
+        user.ClassRoomId = dto.Role == UserRole.Student ? dto.ClassRoomId : null;
+
+        // Only update password if provided
+        if (!string.IsNullOrEmpty(dto.Password))
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+        }
+
+        await _context.SaveChangesAsync();
+
+        var response = new UserResponseDto(user.Id, user.Name, user.Email, user.Role.ToString(), user.ClassRoomId, user.CreatedAt);
+        return Ok(response);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
