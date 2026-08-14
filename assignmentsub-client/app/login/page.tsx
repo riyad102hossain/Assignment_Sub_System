@@ -19,7 +19,8 @@ export default function LoginPage() {
 
     try {
       // API call
-      const response = await api.post("/Auth/Login", { email, password });
+      const response = await api.post("/Auth/login", { email, password });
+      //const response = await api.post("/api/Auth/login", { email, password });
       const { token, user } = response.data;
 
       setAuthData(token, user);
