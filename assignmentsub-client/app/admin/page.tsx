@@ -497,7 +497,7 @@ export default function AdminDashboard() {
                       {subjects.map((subject) => (
                         <div key={subject.id} className="rounded-xl bg-[#141625] border border-gray-800 p-5 shadow-lg hover:shadow-xl transition-all">
                           <h3 className="font-semibold text-white text-lg">{subject.name}</h3>
-                          <p className="text-sm text-gray-400 mt-1">Class: {subject.classRoomName}</p>
+                          <p className="text-sm text-gray-400 mt-1">{subject.classRoomName}</p>
                           <div className="mt-4 flex gap-2">
                             <button
                               onClick={() => handleOpenSubjectModal(subject)}

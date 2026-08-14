@@ -127,19 +127,28 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// 5. Configure Pipeline
-if (app.Environment.IsDevelopment())
+// // 5. Configure Pipeline
+// if (app.Environment.IsDevelopment())
+// {
+//     app.UseSwagger();
+//     app.UseSwaggerUI(c =>
+//     {
+//         c.SwaggerEndpoint("/swagger/v1/swagger.json", "AssignmentSubSystem API v1");
+//     });
+// }
+
+// else
+// {
+//     app.UseHttpsRedirection();
+// }
+
+// Enable Swagger in all environments (including Production/Render)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "AssignmentSubSystem API v1");
-    });
-}
-else
-{
-    app.UseHttpsRedirection();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AssignmentSubSystem API v1");
+    c.RoutePrefix = "swagger"; 
+});
 
 app.UseCors("AllowNextJs");
 app.UseMiddleware<ExceptionMiddleware>();
