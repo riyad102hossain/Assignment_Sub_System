@@ -150,6 +150,9 @@ Assignment_Sub_System/
 │   ├── lib/                       # API Clients & Auth Helpers
 │   ├── Dockerfile                 # Frontend Docker Configuration
 │   └── package.json
+├── AssignmentSubSystem.Tests/     # xUnit Automated Unit Tests Project
+│   ├── SubmissionReviewTests.cs   # Unit tests for submissions
+│   └── UserAuthTests.cs           # Unit tests for authentication logic
 │
 ├── docker-compose.yml             # Orchestration for DB, API, and Frontend
 ├── .env.example                   # Environment Variables Template
@@ -166,7 +169,7 @@ Follow these steps to clone and run the project on your machine.
 Open your terminal and run:
 
 ```bash
-git clone <your-github-repository-url>
+git clone https://github.com/riyad102hossain/Assignment_Sub_System.git
 cd Assignment_Sub_System
 ```
 
@@ -240,9 +243,9 @@ npm run dev
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| **Admin** | `admin@school.com` | `admin123` |
-| **Teacher** | `teacher@school.com` | `teacher123` |
-| **Student** | `student@school.com` | `student123` |
+| **Admin** | `admin@school.com` | `Admin123` |
+| **Teacher** | `teacher@school.com` | `Teacher123` |
+| **Student** | `student@school.com` | `Student123` |
 
 ---
 
